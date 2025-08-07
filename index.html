@@ -1,0 +1,2466 @@
+<script type="text/javascript">
+  var gk_isXlsx = false;
+  var gk_xlsxFileLookup = {};
+  var gk_fileData = {};
+  function filledCell(cell) {
+    return cell !== '' && cell != null;
+  }
+  function loadFileData(filename) {
+    if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+      try {
+        var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+        var firstSheetName = workbook.SheetNames[0];
+        var worksheet = workbook.Sheets[firstSheetName];
+
+        // Convert sheet to JSON to filter blank rows
+        var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+        // Filter out blank rows (rows where all cells are empty, null, or undefined)
+        var filteredData = jsonData.filter(row => row.some(filledCell));
+
+        // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+        var headerRowIndex = filteredData.findIndex((row, index) =>
+          row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+        );
+        // Fallback
+        if (headerRowIndex === -1 || headerRowIndex > 25) {
+          headerRowIndex = 0;
+        }
+
+        // Convert filtered JSON back to CSV
+        var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+        csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+        return csv;
+      } catch (e) {
+        console.error(e);
+        return "";
+      }
+    }
+    return gk_fileData[filename] || "";
+  }
+</script>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nvcleus Workflow Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#463EC2',
+            secondary: '#cbf5dd',
+            dashboardBg: '#F9FAFB',
+            stageCard: '#E0F2FE'
+          },
+          // fontFamily: {
+          //   heading: ['Poppins', 'sans-serif'],
+          //   body: ['Inter', 'sans-serif']
+          // }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Sample manuscript data
+    const initialManuscripts = [
+      {
+        "id": 1,
+        "title": "Integrated dynamic secured line",
+        "author": "Robinette Poleye",
+        "stageId": 7,
+        "progress": 93,
+        "dueDate": "11/11/2024",
+        "assignee": "Lawrence Wayland",
+        "notes": "Multi-layered full-range adapter",
+        "proofingRounds": 3
+      },
+      {
+        "id": 2,
+        "title": "Diverse 24/7 collaboration",
+        "author": "Cosette Garlant",
+        "stageId": 5,
+        "progress": 96,
+        "dueDate": "10/24/2024",
+        "assignee": "Martina Bottleson",
+        "notes": "Public-key dedicated access",
+        "proofingRounds": 3
+      },
+      {
+        "id": 3,
+        "title": "De-engineered foreground concept",
+        "author": "Netty Senecaux",
+        "stageId": 10,
+        "progress": 82,
+        "dueDate": "6/5/2025",
+        "assignee": "Nannette Canet",
+        "notes": "Integrated bi-directional service-desk",
+        "proofingRounds": 5
+      },
+      {
+        "id": 4,
+        "title": "Inverse mobile artificial intelligence",
+        "author": "Bamby Croson",
+        "stageId": 6,
+        "progress": 18,
+        "dueDate": "12/22/2024",
+        "assignee": "Giustino Coote",
+        "notes": "Down-sized background collaboration",
+        "proofingRounds": 2
+      },
+      {
+        "id": 5,
+        "title": "Total solution-oriented neural-net",
+        "author": "Florrie D'Acth",
+        "stageId": 2,
+        "progress": 82,
+        "dueDate": "11/8/2024",
+        "assignee": "Smith Biskupski",
+        "notes": "Integrated radical monitoring",
+        "proofingRounds": 3
+      },
+      {
+        "id": 6,
+        "title": "Business-focused human-resource array",
+        "author": "Hort Eloy",
+        "stageId": 7,
+        "progress": 83,
+        "dueDate": "5/1/2025",
+        "assignee": "Elysia Albinson",
+        "notes": "Integrated even-keeled orchestration",
+        "proofingRounds": 1
+      },
+      {
+        "id": 7,
+        "title": "Sharable homogeneous extranet",
+        "author": "Codie Burgum",
+        "stageId": 4,
+        "progress": 35,
+        "dueDate": "10/20/2024",
+        "assignee": "Sherwood Cours",
+        "notes": "Synchronised zero administration Graphical User Interface",
+        "proofingRounds": 5
+      },
+      {
+        "id": 8,
+        "title": "Balanced static extranet",
+        "author": "Rene Thorneley",
+        "stageId": 2,
+        "progress": 39,
+        "dueDate": "10/31/2024",
+        "assignee": "Cheri Fidilis",
+        "notes": "Reverse-engineered bandwidth-monitored attitude",
+        "proofingRounds": 1
+      },
+      {
+        "id": 9,
+        "title": "Synergistic high-level middleware",
+        "author": "Vyky Glidder",
+        "stageId": 7,
+        "progress": 44,
+        "dueDate": "11/23/2024",
+        "assignee": "Jacques Muscott",
+        "notes": "Front-line dynamic array",
+        "proofingRounds": 3
+      },
+      {
+        "id": 10,
+        "title": "Advanced intermediate paradigm",
+        "author": "Nicola Noraway",
+        "stageId": 12,
+        "progress": 82,
+        "dueDate": "10/8/2024",
+        "assignee": "Evelyn Bladder",
+        "notes": "Total mission-critical attitude",
+        "proofingRounds": 2
+      },
+      {
+        "id": 11,
+        "title": "Fully-configurable contextually-based success",
+        "author": "Lizzy Parbrook",
+        "stageId": 2,
+        "progress": 10,
+        "dueDate": "3/1/2025",
+        "assignee": "Bianca Cuseick",
+        "notes": "Front-line maximized open system",
+        "proofingRounds": 4
+      },
+      {
+        "id": 12,
+        "title": "Streamlined holistic paradigm",
+        "author": "Dilly Ambrozewicz",
+        "stageId": 9,
+        "progress": 21,
+        "dueDate": "8/10/2025",
+        "assignee": "Alasteir Dick",
+        "notes": "Cloned web-enabled solution",
+        "proofingRounds": 5
+      },
+      {
+        "id": 13,
+        "title": "Phased cohesive benchmark",
+        "author": "Tudor Robertis",
+        "stageId": 9,
+        "progress": 80,
+        "dueDate": "2/18/2025",
+        "assignee": "Aaron Pozzi",
+        "notes": "Organic neutral functionalities",
+        "proofingRounds": 4
+      },
+      {
+        "id": 14,
+        "title": "Versatile foreground implementation",
+        "author": "Angelita Pezey",
+        "stageId": 6,
+        "progress": 11,
+        "dueDate": "3/5/2025",
+        "assignee": "Cilka Hawksby",
+        "notes": "Phased optimal open system",
+        "proofingRounds": 4
+      },
+      {
+        "id": 15,
+        "title": "Sharable fresh-thinking system engine",
+        "author": "Aldwin Tressler",
+        "stageId": 2,
+        "progress": 32,
+        "dueDate": "10/2/2024",
+        "assignee": "Nicholle Minigo",
+        "notes": "Triple-buffered zero administration architecture",
+        "proofingRounds": 2
+      },
+      {
+        "id": 16,
+        "title": "Customer-focused directional workforce",
+        "author": "Junie Beckitt",
+        "stageId": 5,
+        "progress": 97,
+        "dueDate": "12/2/2024",
+        "assignee": "Rudy Pena",
+        "notes": "Diverse 24 hour infrastructure",
+        "proofingRounds": 5
+      },
+      {
+        "id": 17,
+        "title": "Stand-alone analyzing knowledge user",
+        "author": "Dominga Gaw",
+        "stageId": 2,
+        "progress": 80,
+        "dueDate": "1/27/2025",
+        "assignee": "Darcee Bedle",
+        "notes": "Mandatory empowering forecast",
+        "proofingRounds": 4
+      },
+      {
+        "id": 18,
+        "title": "Synergistic non-volatile leverage",
+        "author": "Lyndel Boards",
+        "stageId": 11,
+        "progress": 38,
+        "dueDate": "10/24/2024",
+        "assignee": "Irv Lansdale",
+        "notes": "Proactive human-resource internet solution",
+        "proofingRounds": 1
+      },
+      {
+        "id": 19,
+        "title": "Digitized holistic neural-net",
+        "author": "Rorie Bizley",
+        "stageId": 7,
+        "progress": 58,
+        "dueDate": "1/30/2025",
+        "assignee": "Conrad Reading",
+        "notes": "Enterprise-wide asynchronous pricing structure",
+        "proofingRounds": 1
+      },
+      {
+        "id": 20,
+        "title": "Profound tangible software",
+        "author": "Annalise Pawson",
+        "stageId": 5,
+        "progress": 49,
+        "dueDate": "9/18/2025",
+        "assignee": "Stanford Bingall",
+        "notes": "Customer-focused background algorithm",
+        "proofingRounds": 1
+      },
+      {
+        "id": 21,
+        "title": "Proactive eco-centric circuit",
+        "author": "Gibbie Spurryer",
+        "stageId": 9,
+        "progress": 91,
+        "dueDate": "9/7/2025",
+        "assignee": "Ellen Roper",
+        "notes": "Reactive incremental paradigm",
+        "proofingRounds": 5
+      },
+      {
+        "id": 22,
+        "title": "Synergistic grid-enabled algorithm",
+        "author": "Dore Gomersall",
+        "stageId": 10,
+        "progress": 23,
+        "dueDate": "8/18/2025",
+        "assignee": "Ganny Baskett",
+        "notes": "Multi-channelled hybrid secured line",
+        "proofingRounds": 4
+      },
+      {
+        "id": 23,
+        "title": "Front-line motivating protocol",
+        "author": "Sally O'Shirine",
+        "stageId": 5,
+        "progress": 69,
+        "dueDate": "6/10/2025",
+        "assignee": "Fields Melan",
+        "notes": "Triple-buffered didactic emulation",
+        "proofingRounds": 1
+      },
+      {
+        "id": 24,
+        "title": "Stand-alone asynchronous benchmark",
+        "author": "Christin Linskill",
+        "stageId": 6,
+        "progress": 27,
+        "dueDate": "11/3/2024",
+        "assignee": "Theodora Byron",
+        "notes": "Profound asymmetric service-desk",
+        "proofingRounds": 3
+      },
+      {
+        "id": 25,
+        "title": "Reverse-engineered zero tolerance strategy",
+        "author": "Silvano Dawidowitsch",
+        "stageId": 1,
+        "progress": 88,
+        "dueDate": "3/22/2025",
+        "assignee": "Oliver Bawle",
+        "notes": "Digitized scalable leverage",
+        "proofingRounds": 5
+      },
+      {
+        "id": 26,
+        "title": "Operative coherent internet solution",
+        "author": "Mickey Sives",
+        "stageId": 8,
+        "progress": 94,
+        "dueDate": "5/16/2025",
+        "assignee": "Bridget Mateos",
+        "notes": "Intuitive solution-oriented website",
+        "proofingRounds": 5
+      },
+      {
+        "id": 27,
+        "title": "Programmable secondary concept",
+        "author": "Lucy Costin",
+        "stageId": 12,
+        "progress": 65,
+        "dueDate": "5/29/2025",
+        "assignee": "Brian Kille",
+        "notes": "Fundamental high-level utilisation",
+        "proofingRounds": 5
+      },
+      {
+        "id": 28,
+        "title": "Extended dynamic process improvement",
+        "author": "Layla Grund",
+        "stageId": 2,
+        "progress": 43,
+        "dueDate": "1/24/2025",
+        "assignee": "Merrielle Tidder",
+        "notes": "Compatible 24/7 functionalities",
+        "proofingRounds": 2
+      },
+      {
+        "id": 29,
+        "title": "Open-source client-driven analyzer",
+        "author": "Nat Grocock",
+        "stageId": 5,
+        "progress": 35,
+        "dueDate": "3/8/2025",
+        "assignee": "Patricia Jovanovic",
+        "notes": "Virtual intermediate installation",
+        "proofingRounds": 2
+      },
+      {
+        "id": 30,
+        "title": "Enterprise-wide leading edge definition",
+        "author": "Murdoch Rustman",
+        "stageId": 2,
+        "progress": 71,
+        "dueDate": "1/14/2025",
+        "assignee": "Blair Benam",
+        "notes": "Stand-alone dedicated instruction set",
+        "proofingRounds": 1
+      },
+      {
+        "id": 31,
+        "title": "Integrated mobile firmware",
+        "author": "Niel Starbucke",
+        "stageId": 5,
+        "progress": 6,
+        "dueDate": "4/28/2025",
+        "assignee": "Sydelle Bern",
+        "notes": "Mandatory object-oriented capacity",
+        "proofingRounds": 3
+      },
+      {
+        "id": 32,
+        "title": "Monitored maximized hub",
+        "author": "Lavinie Pettingall",
+        "stageId": 11,
+        "progress": 72,
+        "dueDate": "10/27/2024",
+        "assignee": "Kriste Mulvenna",
+        "notes": "Compatible dynamic application",
+        "proofingRounds": 2
+      },
+      {
+        "id": 33,
+        "title": "Programmable empowering product",
+        "author": "Townie Eley",
+        "stageId": 8,
+        "progress": 6,
+        "dueDate": "4/9/2025",
+        "assignee": "Janina Pitblado",
+        "notes": "Face to face contextually-based toolset",
+        "proofingRounds": 4
+      },
+      {
+        "id": 34,
+        "title": "Ergonomic needs-based approach",
+        "author": "Perrine Dibnah",
+        "stageId": 6,
+        "progress": 35,
+        "dueDate": "1/29/2025",
+        "assignee": "Isac Scougall",
+        "notes": "Programmable static moratorium",
+        "proofingRounds": 5
+      },
+      {
+        "id": 35,
+        "title": "Intuitive system-worthy algorithm",
+        "author": "Michelina Dowtry",
+        "stageId": 11,
+        "progress": 66,
+        "dueDate": "3/1/2025",
+        "assignee": "Windham Limer",
+        "notes": "Enhanced full-range software",
+        "proofingRounds": 1
+      },
+      {
+        "id": 36,
+        "title": "Multi-channelled 5th generation algorithm",
+        "author": "Sarge Elsegood",
+        "stageId": 6,
+        "progress": 90,
+        "dueDate": "2/24/2025",
+        "assignee": "Farica Exposito",
+        "notes": "Synergized transitional circuit",
+        "proofingRounds": 5
+      },
+      {
+        "id": 37,
+        "title": "Public-key bandwidth-monitored ability",
+        "author": "Georgi Bowle",
+        "stageId": 11,
+        "progress": 96,
+        "dueDate": "8/19/2025",
+        "assignee": "Tess Shirlaw",
+        "notes": "Polarised eco-centric artificial intelligence",
+        "proofingRounds": 2
+      },
+      {
+        "id": 38,
+        "title": "Switchable tertiary adapter",
+        "author": "Woody Christou",
+        "stageId": 5,
+        "progress": 86,
+        "dueDate": "9/7/2025",
+        "assignee": "Grissel Knotte",
+        "notes": "Versatile intermediate adapter",
+        "proofingRounds": 3
+      },
+      {
+        "id": 39,
+        "title": "Cross-platform intangible groupware",
+        "author": "Hewett Camell",
+        "stageId": 11,
+        "progress": 19,
+        "dueDate": "3/13/2025",
+        "assignee": "Gabi Willmott",
+        "notes": "Intuitive optimal moratorium",
+        "proofingRounds": 2
+      },
+      {
+        "id": 40,
+        "title": "Business-focused explicit focus group",
+        "author": "Byrann Kruse",
+        "stageId": 7,
+        "progress": 41,
+        "dueDate": "9/29/2024",
+        "assignee": "Kaitlin Naire",
+        "notes": "Phased maximized middleware",
+        "proofingRounds": 1
+      },
+      {
+        "id": 41,
+        "title": "User-centric local hub",
+        "author": "Drona Pitney",
+        "stageId": 7,
+        "progress": 7,
+        "dueDate": "8/26/2024",
+        "assignee": "Torie Whitsey",
+        "notes": "Organic motivating secured line",
+        "proofingRounds": 2
+      },
+      {
+        "id": 42,
+        "title": "Secured context-sensitive emulation",
+        "author": "Justin Malecky",
+        "stageId": 3,
+        "progress": 43,
+        "dueDate": "11/1/2024",
+        "assignee": "Bernie McVitty",
+        "notes": "Stand-alone bifurcated leverage",
+        "proofingRounds": 4
+      },
+      {
+        "id": 43,
+        "title": "Triple-buffered stable matrix",
+        "author": "Sibylle Scogings",
+        "stageId": 1,
+        "progress": 87,
+        "dueDate": "9/28/2024",
+        "assignee": "Lorette Bartocci",
+        "notes": "Phased directional hub",
+        "proofingRounds": 2
+      },
+      {
+        "id": 44,
+        "title": "Programmable responsive info-mediaries",
+        "author": "Chrisy Redhole",
+        "stageId": 4,
+        "progress": 6,
+        "dueDate": "9/17/2025",
+        "assignee": "Corrie Russel",
+        "notes": "Fully-configurable 5th generation application",
+        "proofingRounds": 3
+      },
+      {
+        "id": 45,
+        "title": "Secured tangible customer loyalty",
+        "author": "Elnar Fiorentino",
+        "stageId": 7,
+        "progress": 52,
+        "dueDate": "10/20/2024",
+        "assignee": "Aristotle Laughlan",
+        "notes": "Seamless homogeneous encoding",
+        "proofingRounds": 5
+      },
+      {
+        "id": 46,
+        "title": "Cross-platform bi-directional Graphical User Interface",
+        "author": "Pauletta Pettiford",
+        "stageId": 1,
+        "progress": 46,
+        "dueDate": "3/16/2025",
+        "assignee": "Noby Joyson",
+        "notes": "Versatile web-enabled archive",
+        "proofingRounds": 5
+      },
+      {
+        "id": 47,
+        "title": "Reduced zero administration projection",
+        "author": "Jedidiah Biaggiotti",
+        "stageId": 10,
+        "progress": 10,
+        "dueDate": "1/11/2025",
+        "assignee": "Layton Cluatt",
+        "notes": "Compatible intangible alliance",
+        "proofingRounds": 3
+      },
+      {
+        "id": 48,
+        "title": "Optional attitude-oriented hierarchy",
+        "author": "Pierre Maffioletti",
+        "stageId": 5,
+        "progress": 96,
+        "dueDate": "5/30/2025",
+        "assignee": "Kailey Dimitrijevic",
+        "notes": "Distributed clear-thinking knowledge base",
+        "proofingRounds": 5
+      },
+      {
+        "id": 49,
+        "title": "Grass-roots grid-enabled encryption",
+        "author": "Salli Rillatt",
+        "stageId": 2,
+        "progress": 32,
+        "dueDate": "2/5/2025",
+        "assignee": "Gilburt Houlahan",
+        "notes": "Re-engineered 24 hour task-force",
+        "proofingRounds": 5
+      },
+      {
+        "id": 50,
+        "title": "Managed neutral access",
+        "author": "Dione Scallon",
+        "stageId": 11,
+        "progress": 73,
+        "dueDate": "4/23/2025",
+        "assignee": "Nathalia Jersch",
+        "notes": "Advanced clear-thinking portal",
+        "proofingRounds": 1
+      },
+      {
+        "id": 51,
+        "title": "Monitored logistical product",
+        "author": "Brynna Mattis",
+        "stageId": 8,
+        "progress": 78,
+        "dueDate": "5/1/2025",
+        "assignee": "Harwilll de Wilde",
+        "notes": "Future-proofed 6th generation encryption",
+        "proofingRounds": 3
+      },
+      {
+        "id": 52,
+        "title": "Integrated responsive conglomeration",
+        "author": "Olympie Stollenhof",
+        "stageId": 11,
+        "progress": 2,
+        "dueDate": "11/9/2024",
+        "assignee": "Goraud Wassell",
+        "notes": "Fundamental methodical initiative",
+        "proofingRounds": 3
+      },
+      {
+        "id": 53,
+        "title": "Up-sized national installation",
+        "author": "Pearle Bonavia",
+        "stageId": 7,
+        "progress": 95,
+        "dueDate": "4/30/2025",
+        "assignee": "Rasla Borrington",
+        "notes": "Reverse-engineered needs-based concept",
+        "proofingRounds": 1
+      },
+      {
+        "id": 54,
+        "title": "De-engineered multi-tasking moratorium",
+        "author": "Ray Manchett",
+        "stageId": 6,
+        "progress": 93,
+        "dueDate": "8/27/2024",
+        "assignee": "Fulvia Simoneau",
+        "notes": "Customer-focused leading edge neural-net",
+        "proofingRounds": 4
+      },
+      {
+        "id": 55,
+        "title": "Cross-platform background intranet",
+        "author": "Isidore McGill",
+        "stageId": 4,
+        "progress": 100,
+        "dueDate": "8/29/2024",
+        "assignee": "Jules Buscher",
+        "notes": "Total dedicated open system",
+        "proofingRounds": 4
+      },
+      {
+        "id": 56,
+        "title": "Focused reciprocal moratorium",
+        "author": "Jaquenetta Boays",
+        "stageId": 2,
+        "progress": 59,
+        "dueDate": "3/17/2025",
+        "assignee": "Valentina Munnis",
+        "notes": "Customizable mobile firmware",
+        "proofingRounds": 2
+      },
+      {
+        "id": 57,
+        "title": "Assimilated context-sensitive challenge",
+        "author": "Kelci Alasdair",
+        "stageId": 3,
+        "progress": 99,
+        "dueDate": "7/18/2025",
+        "assignee": "Wileen Bullocke",
+        "notes": "Upgradable asynchronous middleware",
+        "proofingRounds": 2
+      },
+      {
+        "id": 58,
+        "title": "Robust explicit synergy",
+        "author": "Kate Carass",
+        "stageId": 11,
+        "progress": 48,
+        "dueDate": "8/14/2024",
+        "assignee": "Arie Armstrong",
+        "notes": "Persevering stable project",
+        "proofingRounds": 3
+      },
+      {
+        "id": 59,
+        "title": "Enhanced uniform migration",
+        "author": "Domini Pykett",
+        "stageId": 6,
+        "progress": 21,
+        "dueDate": "7/4/2025",
+        "assignee": "Tove Jozsika",
+        "notes": "Switchable bifurcated flexibility",
+        "proofingRounds": 2
+      },
+      {
+        "id": 60,
+        "title": "Operative fault-tolerant adapter",
+        "author": "Mela Ramelet",
+        "stageId": 12,
+        "progress": 18,
+        "dueDate": "6/7/2025",
+        "assignee": "Frankie Mussilli",
+        "notes": "Automated 24 hour parallelism",
+        "proofingRounds": 2
+      },
+      {
+        "id": 61,
+        "title": "Synchronised solution-oriented data-warehouse",
+        "author": "Tracee Ordelt",
+        "stageId": 5,
+        "progress": 26,
+        "dueDate": "8/9/2024",
+        "assignee": "Haily Heater",
+        "notes": "Grass-roots systematic open system",
+        "proofingRounds": 1
+      },
+      {
+        "id": 62,
+        "title": "Innovative coherent approach",
+        "author": "Margarette Peterkin",
+        "stageId": 8,
+        "progress": 53,
+        "dueDate": "9/17/2025",
+        "assignee": "Jeremie Springer",
+        "notes": "Balanced object-oriented service-desk",
+        "proofingRounds": 2
+      },
+      {
+        "id": 63,
+        "title": "Assimilated motivating algorithm",
+        "author": "Doralia Dinnington",
+        "stageId": 9,
+        "progress": 3,
+        "dueDate": "4/8/2025",
+        "assignee": "Albertine Boich",
+        "notes": "Managed 24 hour portal",
+        "proofingRounds": 3
+      },
+      {
+        "id": 64,
+        "title": "Grass-roots 24 hour analyzer",
+        "author": "Brade Grunwall",
+        "stageId": 6,
+        "progress": 84,
+        "dueDate": "3/20/2025",
+        "assignee": "Corinne Gorrissen",
+        "notes": "Up-sized value-added complexity",
+        "proofingRounds": 2
+      },
+      {
+        "id": 65,
+        "title": "Intuitive foreground solution",
+        "author": "Sharon Haslam",
+        "stageId": 1,
+        "progress": 94,
+        "dueDate": "9/4/2024",
+        "assignee": "Rosy Spering",
+        "notes": "Multi-tiered optimal paradigm",
+        "proofingRounds": 3
+      },
+      {
+        "id": 66,
+        "title": "Multi-layered heuristic hierarchy",
+        "author": "Jaquelin Valentin",
+        "stageId": 1,
+        "progress": 76,
+        "dueDate": "9/25/2025",
+        "assignee": "Myrta Ranscomb",
+        "notes": "Distributed radical success",
+        "proofingRounds": 3
+      },
+      {
+        "id": 67,
+        "title": "Self-enabling national conglomeration",
+        "author": "Lethia Dobsons",
+        "stageId": 6,
+        "progress": 94,
+        "dueDate": "7/23/2025",
+        "assignee": "Husain Matteoli",
+        "notes": "Streamlined clear-thinking moderator",
+        "proofingRounds": 4
+      },
+      {
+        "id": 68,
+        "title": "Devolved clear-thinking productivity",
+        "author": "Darryl Poat",
+        "stageId": 5,
+        "progress": 5,
+        "dueDate": "9/22/2024",
+        "assignee": "Bret Fowler",
+        "notes": "Team-oriented reciprocal solution",
+        "proofingRounds": 2
+      },
+      {
+        "id": 69,
+        "title": "Persevering clear-thinking analyzer",
+        "author": "Lurlene Spillett",
+        "stageId": 1,
+        "progress": 62,
+        "dueDate": "12/9/2024",
+        "assignee": "Gusta Wenman",
+        "notes": "Innovative tertiary conglomeration",
+        "proofingRounds": 1
+      },
+      {
+        "id": 70,
+        "title": "Switchable scalable internet solution",
+        "author": "Joaquin Coan",
+        "stageId": 5,
+        "progress": 28,
+        "dueDate": "9/18/2025",
+        "assignee": "Gayleen Farrall",
+        "notes": "Secured coherent knowledge base",
+        "proofingRounds": 3
+      },
+      {
+        "id": 71,
+        "title": "Robust user-facing function",
+        "author": "Seward Jewar",
+        "stageId": 8,
+        "progress": 75,
+        "dueDate": "12/17/2024",
+        "assignee": "Zarla MacCaghan",
+        "notes": "Total eco-centric success",
+        "proofingRounds": 1
+      },
+      {
+        "id": 72,
+        "title": "Self-enabling uniform groupware",
+        "author": "Eduino Honack",
+        "stageId": 9,
+        "progress": 13,
+        "dueDate": "12/25/2024",
+        "assignee": "Gretel Curr",
+        "notes": "Cross-group local secured line",
+        "proofingRounds": 5
+      },
+      {
+        "id": 73,
+        "title": "Exclusive multi-state instruction set",
+        "author": "Ely Maddinon",
+        "stageId": 2,
+        "progress": 1,
+        "dueDate": "6/29/2025",
+        "assignee": "Alick Midden",
+        "notes": "Face to face web-enabled artificial intelligence",
+        "proofingRounds": 5
+      },
+      {
+        "id": 74,
+        "title": "Quality-focused radical definition",
+        "author": "Enriqueta Glennie",
+        "stageId": 6,
+        "progress": 77,
+        "dueDate": "8/4/2025",
+        "assignee": "Kattie Tubridy",
+        "notes": "Digitized well-modulated encryption",
+        "proofingRounds": 3
+      },
+      {
+        "id": 75,
+        "title": "Ameliorated leading edge task-force",
+        "author": "Kaine Nisot",
+        "stageId": 10,
+        "progress": 64,
+        "dueDate": "5/3/2025",
+        "assignee": "Delbert Gee",
+        "notes": "Future-proofed demand-driven parallelism",
+        "proofingRounds": 5
+      },
+      {
+        "id": 76,
+        "title": "Automated bifurcated moderator",
+        "author": "Jeniece Gault",
+        "stageId": 8,
+        "progress": 7,
+        "dueDate": "8/11/2024",
+        "assignee": "Violet Maase",
+        "notes": "Seamless national software",
+        "proofingRounds": 2
+      },
+      {
+        "id": 77,
+        "title": "Profit-focused 3rd generation framework",
+        "author": "Diego Giraldo",
+        "stageId": 9,
+        "progress": 90,
+        "dueDate": "7/13/2025",
+        "assignee": "Annadiana Dunnico",
+        "notes": "Realigned disintermediate circuit",
+        "proofingRounds": 2
+      },
+      {
+        "id": 78,
+        "title": "Synchronised coherent info-mediaries",
+        "author": "Luce Vanes",
+        "stageId": 11,
+        "progress": 72,
+        "dueDate": "8/12/2025",
+        "assignee": "Welsh Jaxon",
+        "notes": "Multi-layered explicit interface",
+        "proofingRounds": 3
+      },
+      {
+        "id": 79,
+        "title": "De-engineered context-sensitive intranet",
+        "author": "Windham Romaines",
+        "stageId": 7,
+        "progress": 48,
+        "dueDate": "8/8/2024",
+        "assignee": "Earl Knowlys",
+        "notes": "Team-oriented high-level superstructure",
+        "proofingRounds": 4
+      },
+      {
+        "id": 80,
+        "title": "Managed scalable synergy",
+        "author": "Teresina Durant",
+        "stageId": 11,
+        "progress": 27,
+        "dueDate": "7/18/2025",
+        "assignee": "Julieta Galloway",
+        "notes": "Down-sized attitude-oriented archive",
+        "proofingRounds": 2
+      },
+      {
+        "id": 81,
+        "title": "Profound regional superstructure",
+        "author": "Jacenta Barnewille",
+        "stageId": 9,
+        "progress": 67,
+        "dueDate": "8/28/2025",
+        "assignee": "Katerine Filimore",
+        "notes": "Customer-focused mission-critical knowledge base",
+        "proofingRounds": 3
+      },
+      {
+        "id": 82,
+        "title": "Team-oriented needs-based emulation",
+        "author": "Max Backs",
+        "stageId": 1,
+        "progress": 67,
+        "dueDate": "8/11/2024",
+        "assignee": "Billy Englefield",
+        "notes": "Fundamental explicit hierarchy",
+        "proofingRounds": 3
+      },
+      {
+        "id": 83,
+        "title": "Multi-tiered asymmetric contingency",
+        "author": "Cristobal Lawther",
+        "stageId": 4,
+        "progress": 28,
+        "dueDate": "2/4/2025",
+        "assignee": "Tove Sermin",
+        "notes": "Vision-oriented optimizing challenge",
+        "proofingRounds": 2
+      },
+      {
+        "id": 84,
+        "title": "Progressive transitional software",
+        "author": "Edward Coveley",
+        "stageId": 10,
+        "progress": 66,
+        "dueDate": "10/31/2024",
+        "assignee": "Josy Stockney",
+        "notes": "Programmable zero administration info-mediaries",
+        "proofingRounds": 3
+      },
+      {
+        "id": 85,
+        "title": "Programmable non-volatile software",
+        "author": "Ferd Glancey",
+        "stageId": 7,
+        "progress": 75,
+        "dueDate": "11/25/2024",
+        "assignee": "Marika Lambertazzi",
+        "notes": "Focused 6th generation algorithm",
+        "proofingRounds": 2
+      },
+      {
+        "id": 86,
+        "title": "Object-based scalable access",
+        "author": "Clint Byas",
+        "stageId": 6,
+        "progress": 37,
+        "dueDate": "6/14/2025",
+        "assignee": "Fiona Hill",
+        "notes": "Inverse system-worthy toolset",
+        "proofingRounds": 2
+      },
+      {
+        "id": 87,
+        "title": "Compatible user-facing workforce",
+        "author": "Rori Kerrich",
+        "stageId": 10,
+        "progress": 7,
+        "dueDate": "8/25/2024",
+        "assignee": "Tirrell Burree",
+        "notes": "Integrated incremental project",
+        "proofingRounds": 4
+      },
+      {
+        "id": 88,
+        "title": "Streamlined directional process improvement",
+        "author": "Helsa Beneyto",
+        "stageId": 11,
+        "progress": 59,
+        "dueDate": "6/1/2025",
+        "assignee": "Douglass Tiley",
+        "notes": "Proactive exuding installation",
+        "proofingRounds": 3
+      },
+      {
+        "id": 89,
+        "title": "Open-source needs-based emulation",
+        "author": "Keane Sinnie",
+        "stageId": 8,
+        "progress": 47,
+        "dueDate": "2/28/2025",
+        "assignee": "Midge Sayton",
+        "notes": "Fundamental 5th generation product",
+        "proofingRounds": 1
+      },
+      {
+        "id": 90,
+        "title": "Horizontal web-enabled emulation",
+        "author": "Charmaine Snipe",
+        "stageId": 8,
+        "progress": 98,
+        "dueDate": "2/26/2025",
+        "assignee": "Glynnis Kearle",
+        "notes": "Polarised 24/7 task-force",
+        "proofingRounds": 1
+      },
+      {
+        "id": 91,
+        "title": "Open-source background flexibility",
+        "author": "Debor Edmondson",
+        "stageId": 10,
+        "progress": 56,
+        "dueDate": "12/12/2024",
+        "assignee": "Gabey Wooler",
+        "notes": "Customizable modular customer loyalty",
+        "proofingRounds": 4
+      },
+      {
+        "id": 92,
+        "title": "Upgradable bottom-line website",
+        "author": "Harbert Bingham",
+        "stageId": 10,
+        "progress": 99,
+        "dueDate": "8/29/2024",
+        "assignee": "Brook Parradice",
+        "notes": "Visionary fresh-thinking service-desk",
+        "proofingRounds": 2
+      },
+      {
+        "id": 93,
+        "title": "Progressive neutral productivity",
+        "author": "Ezra Trinbey",
+        "stageId": 12,
+        "progress": 39,
+        "dueDate": "11/17/2024",
+        "assignee": "Harriott Greeson",
+        "notes": "Integrated encompassing access",
+        "proofingRounds": 2
+      },
+      {
+        "id": 94,
+        "title": "Synchronised methodical task-force",
+        "author": "Dario Dahmel",
+        "stageId": 10,
+        "progress": 56,
+        "dueDate": "5/31/2025",
+        "assignee": "Flossi Osmint",
+        "notes": "Future-proofed incremental matrix",
+        "proofingRounds": 2
+      },
+      {
+        "id": 95,
+        "title": "Secured exuding initiative",
+        "author": "Mireielle Lere",
+        "stageId": 11,
+        "progress": 70,
+        "dueDate": "7/10/2025",
+        "assignee": "Melantha Sokill",
+        "notes": "Function-based 6th generation extranet",
+        "proofingRounds": 2
+      },
+      {
+        "id": 96,
+        "title": "Integrated system-worthy success",
+        "author": "Skipp Dawdary",
+        "stageId": 1,
+        "progress": 39,
+        "dueDate": "4/11/2025",
+        "assignee": "Burnard Ewenson",
+        "notes": "Profound tertiary matrices",
+        "proofingRounds": 4
+      },
+      {
+        "id": 97,
+        "title": "Mandatory stable archive",
+        "author": "Wilhelm Johl",
+        "stageId": 11,
+        "progress": 19,
+        "dueDate": "8/24/2025",
+        "assignee": "Ian Larby",
+        "notes": "Optimized scalable emulation",
+        "proofingRounds": 2
+      },
+      {
+        "id": 98,
+        "title": "Focused bottom-line application",
+        "author": "Elfrida Caslett",
+        "stageId": 1,
+        "progress": 94,
+        "dueDate": "4/20/2025",
+        "assignee": "Gale Montgomery",
+        "notes": "Multi-tiered motivating application",
+        "proofingRounds": 3
+      },
+      {
+        "id": 99,
+        "title": "Switchable leading edge emulation",
+        "author": "Kala Plume",
+        "stageId": 6,
+        "progress": 86,
+        "dueDate": "11/26/2024",
+        "assignee": "Monti Reggio",
+        "notes": "Multi-layered clear-thinking success",
+        "proofingRounds": 2
+      },
+      {
+        "id": 100,
+        "title": "Devolved well-modulated array",
+        "author": "Krishnah Mingey",
+        "stageId": 11,
+        "progress": 65,
+        "dueDate": "3/5/2025",
+        "assignee": "Corby Basil",
+        "notes": "Implemented upward-trending methodology",
+        "proofingRounds": 5
+      },
+      {
+        "id": 101,
+        "title": "Monitored bi-directional array",
+        "author": "Hali Eul",
+        "stageId": 3,
+        "progress": 21,
+        "dueDate": "2/7/2025",
+        "assignee": "Franklyn Harrington",
+        "notes": "Phased incremental customer loyalty",
+        "proofingRounds": 5
+      },
+      {
+        "id": 102,
+        "title": "Centralized heuristic standardization",
+        "author": "Stafford Comberbeach",
+        "stageId": 7,
+        "progress": 24,
+        "dueDate": "4/23/2025",
+        "assignee": "Gratiana Farley",
+        "notes": "Centralized empowering capability",
+        "proofingRounds": 2
+      },
+      {
+        "id": 103,
+        "title": "Assimilated multi-state encoding",
+        "author": "Teri Burthom",
+        "stageId": 1,
+        "progress": 47,
+        "dueDate": "8/11/2025",
+        "assignee": "Pooh Colkett",
+        "notes": "De-engineered zero tolerance challenge",
+        "proofingRounds": 5
+      },
+      {
+        "id": 104,
+        "title": "Front-line interactive standardization",
+        "author": "Shawna Blount",
+        "stageId": 1,
+        "progress": 36,
+        "dueDate": "9/5/2024",
+        "assignee": "Kare Forde",
+        "notes": "Focused 6th generation budgetary management",
+        "proofingRounds": 3
+      },
+      {
+        "id": 105,
+        "title": "De-engineered well-modulated instruction set",
+        "author": "Emily Olpin",
+        "stageId": 5,
+        "progress": 8,
+        "dueDate": "9/22/2024",
+        "assignee": "Heddi Renowden",
+        "notes": "Visionary maximized parallelism",
+        "proofingRounds": 5
+      },
+      {
+        "id": 106,
+        "title": "Implemented fresh-thinking matrix",
+        "author": "Devlin Dielhenn",
+        "stageId": 1,
+        "progress": 11,
+        "dueDate": "4/18/2025",
+        "assignee": "Care Neem",
+        "notes": "Innovative non-volatile array",
+        "proofingRounds": 5
+      },
+      {
+        "id": 107,
+        "title": "De-engineered contextually-based focus group",
+        "author": "Berty Duligal",
+        "stageId": 8,
+        "progress": 43,
+        "dueDate": "1/29/2025",
+        "assignee": "Moore Matiebe",
+        "notes": "Organized intermediate array",
+        "proofingRounds": 5
+      },
+      {
+        "id": 108,
+        "title": "Diverse bifurcated capability",
+        "author": "Chevalier Danell",
+        "stageId": 7,
+        "progress": 90,
+        "dueDate": "5/3/2025",
+        "assignee": "Sylvester Jennick",
+        "notes": "Team-oriented directional solution",
+        "proofingRounds": 4
+      },
+      {
+        "id": 109,
+        "title": "Function-based multi-tasking artificial intelligence",
+        "author": "Anna Starbuck",
+        "stageId": 4,
+        "progress": 65,
+        "dueDate": "8/17/2025",
+        "assignee": "Preston Brindley",
+        "notes": "Customer-focused systemic matrices",
+        "proofingRounds": 2
+      },
+      {
+        "id": 110,
+        "title": "Synergistic eco-centric middleware",
+        "author": "Bobbe Cheng",
+        "stageId": 9,
+        "progress": 74,
+        "dueDate": "11/23/2024",
+        "assignee": "Genevra Ponter",
+        "notes": "Mandatory demand-driven capacity",
+        "proofingRounds": 3
+      },
+      {
+        "id": 111,
+        "title": "Open-source asymmetric structure",
+        "author": "Bethanne Petrolli",
+        "stageId": 8,
+        "progress": 6,
+        "dueDate": "9/8/2025",
+        "assignee": "Ulrike McGonigal",
+        "notes": "Function-based static open system",
+        "proofingRounds": 2
+      },
+      {
+        "id": 112,
+        "title": "Implemented 5th generation info-mediaries",
+        "author": "Missie Dannell",
+        "stageId": 7,
+        "progress": 62,
+        "dueDate": "5/6/2025",
+        "assignee": "Odelle Stores",
+        "notes": "Automated interactive superstructure",
+        "proofingRounds": 5
+      },
+      {
+        "id": 113,
+        "title": "Triple-buffered motivating concept",
+        "author": "Evania Hutchcraft",
+        "stageId": 2,
+        "progress": 30,
+        "dueDate": "9/8/2024",
+        "assignee": "Northrup Pepys",
+        "notes": "Total tangible task-force",
+        "proofingRounds": 4
+      },
+      {
+        "id": 114,
+        "title": "Polarised motivating forecast",
+        "author": "Selena Domniney",
+        "stageId": 1,
+        "progress": 16,
+        "dueDate": "12/17/2024",
+        "assignee": "Nydia Geeves",
+        "notes": "Exclusive impactful productivity",
+        "proofingRounds": 2
+      },
+      {
+        "id": 115,
+        "title": "Operative multi-tasking forecast",
+        "author": "Bekki Megany",
+        "stageId": 10,
+        "progress": 27,
+        "dueDate": "3/1/2025",
+        "assignee": "Dotti Drescher",
+        "notes": "Cross-group high-level firmware",
+        "proofingRounds": 2
+      },
+      {
+        "id": 116,
+        "title": "Implemented foreground architecture",
+        "author": "Athene Barwise",
+        "stageId": 10,
+        "progress": 89,
+        "dueDate": "12/10/2024",
+        "assignee": "Jacob Ramey",
+        "notes": "Fully-configurable maximized middleware",
+        "proofingRounds": 2
+      },
+      {
+        "id": 117,
+        "title": "Object-based global Graphical User Interface",
+        "author": "Warden Cammock",
+        "stageId": 2,
+        "progress": 19,
+        "dueDate": "8/25/2025",
+        "assignee": "Christophorus Rabier",
+        "notes": "Assimilated even-keeled function",
+        "proofingRounds": 4
+      },
+      {
+        "id": 118,
+        "title": "Grass-roots optimizing success",
+        "author": "Katine Spridgeon",
+        "stageId": 1,
+        "progress": 49,
+        "dueDate": "12/31/2024",
+        "assignee": "Mick Kunz",
+        "notes": "Progressive attitude-oriented help-desk",
+        "proofingRounds": 5
+      },
+      {
+        "id": 119,
+        "title": "Multi-channelled transitional open system",
+        "author": "Cullan Fairholm",
+        "stageId": 9,
+        "progress": 11,
+        "dueDate": "8/15/2024",
+        "assignee": "Valentin Nicolson",
+        "notes": "Future-proofed next generation moderator",
+        "proofingRounds": 3
+      },
+      {
+        "id": 120,
+        "title": "Public-key incremental matrices",
+        "author": "Hedvig Meineking",
+        "stageId": 9,
+        "progress": 45,
+        "dueDate": "7/5/2025",
+        "assignee": "Damon Brindle",
+        "notes": "Total zero tolerance algorithm",
+        "proofingRounds": 5
+      },
+      {
+        "id": 121,
+        "title": "Stand-alone empowering time-frame",
+        "author": "Danni Mazzia",
+        "stageId": 7,
+        "progress": 52,
+        "dueDate": "1/21/2025",
+        "assignee": "Troy Coghlan",
+        "notes": "Implemented object-oriented projection",
+        "proofingRounds": 3
+      },
+      {
+        "id": 122,
+        "title": "Upgradable systematic access",
+        "author": "Merrel Crosen",
+        "stageId": 11,
+        "progress": 38,
+        "dueDate": "6/16/2025",
+        "assignee": "Freeman Lening",
+        "notes": "Horizontal bifurcated interface",
+        "proofingRounds": 3
+      },
+      {
+        "id": 123,
+        "title": "Expanded system-worthy analyzer",
+        "author": "Ferdy Enefer",
+        "stageId": 10,
+        "progress": 62,
+        "dueDate": "11/28/2024",
+        "assignee": "Elladine Caw",
+        "notes": "Persistent contextually-based product",
+        "proofingRounds": 5
+      },
+      {
+        "id": 124,
+        "title": "Team-oriented full-range encoding",
+        "author": "Warren Cicerone",
+        "stageId": 1,
+        "progress": 36,
+        "dueDate": "9/3/2025",
+        "assignee": "Aubree McLurg",
+        "notes": "Programmable dynamic encoding",
+        "proofingRounds": 3
+      },
+      {
+        "id": 125,
+        "title": "Automated homogeneous leverage",
+        "author": "Delly Kimmel",
+        "stageId": 9,
+        "progress": 4,
+        "dueDate": "7/24/2025",
+        "assignee": "Dale McGarrity",
+        "notes": "Re-contextualized contextually-based success",
+        "proofingRounds": 2
+      },
+      {
+        "id": 126,
+        "title": "Streamlined interactive Graphic Interface",
+        "author": "Joseph Cozzi",
+        "stageId": 6,
+        "progress": 62,
+        "dueDate": "5/1/2025",
+        "assignee": "Wilt Tattersall",
+        "notes": "Integrated content-based Graphic Interface",
+        "proofingRounds": 4
+      },
+      {
+        "id": 127,
+        "title": "Enhanced content-based projection",
+        "author": "Adrien Pietersma",
+        "stageId": 5,
+        "progress": 9,
+        "dueDate": "4/15/2025",
+        "assignee": "Neille Petrichat",
+        "notes": "De-engineered interactive moratorium",
+        "proofingRounds": 2
+      },
+      {
+        "id": 128,
+        "title": "Managed tertiary throughput",
+        "author": "Dreddy Challiner",
+        "stageId": 9,
+        "progress": 95,
+        "dueDate": "8/3/2025",
+        "assignee": "Lelah Meach",
+        "notes": "Decentralized intangible collaboration",
+        "proofingRounds": 3
+      },
+      {
+        "id": 129,
+        "title": "Expanded systematic system engine",
+        "author": "Sayer Schlagman",
+        "stageId": 2,
+        "progress": 56,
+        "dueDate": "2/17/2025",
+        "assignee": "Noreen Griffoen",
+        "notes": "Diverse uniform projection",
+        "proofingRounds": 2
+      },
+      {
+        "id": 130,
+        "title": "Organic composite core",
+        "author": "Allin Maleney",
+        "stageId": 8,
+        "progress": 64,
+        "dueDate": "8/20/2024",
+        "assignee": "Barbie Espasa",
+        "notes": "Robust neutral paradigm",
+        "proofingRounds": 2
+      },
+      {
+        "id": 131,
+        "title": "Progressive hybrid initiative",
+        "author": "Burton Thurston",
+        "stageId": 2,
+        "progress": 21,
+        "dueDate": "2/2/2025",
+        "assignee": "Junette Cloake",
+        "notes": "Organic bandwidth-monitored project",
+        "proofingRounds": 4
+      },
+      {
+        "id": 132,
+        "title": "Exclusive clear-thinking frame",
+        "author": "Carlye Bulled",
+        "stageId": 12,
+        "progress": 45,
+        "dueDate": "12/24/2024",
+        "assignee": "Candra Sabate",
+        "notes": "Quality-focused cohesive database",
+        "proofingRounds": 5
+      },
+      {
+        "id": 133,
+        "title": "Universal discrete encryption",
+        "author": "Martha Mirfin",
+        "stageId": 1,
+        "progress": 62,
+        "dueDate": "9/9/2025",
+        "assignee": "Dillon Hackley",
+        "notes": "Persistent user-facing model",
+        "proofingRounds": 2
+      },
+      {
+        "id": 134,
+        "title": "Compatible local support",
+        "author": "Bunny Ronca",
+        "stageId": 4,
+        "progress": 58,
+        "dueDate": "5/14/2025",
+        "assignee": "Law Temperley",
+        "notes": "Versatile human-resource array",
+        "proofingRounds": 5
+      },
+      {
+        "id": 135,
+        "title": "Cross-platform even-keeled superstructure",
+        "author": "Roddy Goldingay",
+        "stageId": 2,
+        "progress": 8,
+        "dueDate": "11/6/2024",
+        "assignee": "Shanon Nichol",
+        "notes": "Configurable eco-centric array",
+        "proofingRounds": 5
+      },
+      {
+        "id": 136,
+        "title": "Vision-oriented intangible benchmark",
+        "author": "Amara Pass",
+        "stageId": 11,
+        "progress": 94,
+        "dueDate": "5/26/2025",
+        "assignee": "Emylee Piatto",
+        "notes": "Virtual fault-tolerant forecast",
+        "proofingRounds": 4
+      },
+      {
+        "id": 137,
+        "title": "Synchronised composite middleware",
+        "author": "Joete Christley",
+        "stageId": 12,
+        "progress": 22,
+        "dueDate": "9/3/2025",
+        "assignee": "Mikaela Wilfling",
+        "notes": "Optimized foreground attitude",
+        "proofingRounds": 2
+      },
+      {
+        "id": 138,
+        "title": "Seamless content-based product",
+        "author": "Kinnie Taile",
+        "stageId": 2,
+        "progress": 72,
+        "dueDate": "1/9/2025",
+        "assignee": "Lynnett Raspel",
+        "notes": "Up-sized 3rd generation circuit",
+        "proofingRounds": 2
+      },
+      {
+        "id": 139,
+        "title": "Vision-oriented transitional orchestration",
+        "author": "Donnamarie Hubbock",
+        "stageId": 11,
+        "progress": 48,
+        "dueDate": "8/9/2025",
+        "assignee": "Urbain Nuss",
+        "notes": "Fully-configurable system-worthy analyzer",
+        "proofingRounds": 2
+      },
+      {
+        "id": 140,
+        "title": "Future-proofed even-keeled interface",
+        "author": "Bernie Siret",
+        "stageId": 7,
+        "progress": 57,
+        "dueDate": "9/26/2024",
+        "assignee": "Ernestine Gravie",
+        "notes": "Expanded disintermediate encoding",
+        "proofingRounds": 5
+      },
+      {
+        "id": 141,
+        "title": "Object-based dynamic Graphical User Interface",
+        "author": "Addi Acors",
+        "stageId": 8,
+        "progress": 8,
+        "dueDate": "6/30/2025",
+        "assignee": "Denver Gregor",
+        "notes": "Total bi-directional ability",
+        "proofingRounds": 1
+      },
+      {
+        "id": 142,
+        "title": "Persistent system-worthy encoding",
+        "author": "Bill Pollett",
+        "stageId": 5,
+        "progress": 25,
+        "dueDate": "9/2/2024",
+        "assignee": "Tammie Gantzman",
+        "notes": "Pre-emptive attitude-oriented success",
+        "proofingRounds": 5
+      },
+      {
+        "id": 143,
+        "title": "Devolved 3rd generation structure",
+        "author": "Marcella Paike",
+        "stageId": 4,
+        "progress": 10,
+        "dueDate": "9/27/2025",
+        "assignee": "Barnebas Trazzi",
+        "notes": "Business-focused background matrix",
+        "proofingRounds": 1
+      },
+      {
+        "id": 144,
+        "title": "Enhanced background hierarchy",
+        "author": "Tawnya Sudell",
+        "stageId": 12,
+        "progress": 13,
+        "dueDate": "5/21/2025",
+        "assignee": "Marj Rizon",
+        "notes": "Synchronised value-added portal",
+        "proofingRounds": 2
+      },
+      {
+        "id": 145,
+        "title": "Self-enabling didactic strategy",
+        "author": "Ezri Merchant",
+        "stageId": 7,
+        "progress": 84,
+        "dueDate": "6/27/2025",
+        "assignee": "Franny Richardes",
+        "notes": "Open-architected 24/7 toolset",
+        "proofingRounds": 3
+      },
+      {
+        "id": 146,
+        "title": "Quality-focused neutral methodology",
+        "author": "Georgy Guesford",
+        "stageId": 9,
+        "progress": 47,
+        "dueDate": "7/30/2025",
+        "assignee": "Noah Hailes",
+        "notes": "Cross-group grid-enabled portal",
+        "proofingRounds": 1
+      },
+      {
+        "id": 147,
+        "title": "Future-proofed local infrastructure",
+        "author": "Fairleigh Tute",
+        "stageId": 1,
+        "progress": 4,
+        "dueDate": "2/19/2025",
+        "assignee": "Pearle Langrish",
+        "notes": "Automated tertiary capability",
+        "proofingRounds": 3
+      },
+      {
+        "id": 148,
+        "title": "User-friendly 6th generation function",
+        "author": "Austen Heighton",
+        "stageId": 3,
+        "progress": 42,
+        "dueDate": "6/19/2025",
+        "assignee": "Garik De La Cote",
+        "notes": "Extended cohesive attitude",
+        "proofingRounds": 5
+      },
+      {
+        "id": 149,
+        "title": "Synergistic human-resource standardization",
+        "author": "Gail Eccleston",
+        "stageId": 9,
+        "progress": 93,
+        "dueDate": "1/9/2025",
+        "assignee": "Jourdain Gawkes",
+        "notes": "Open-source 24 hour utilisation",
+        "proofingRounds": 4
+      },
+      {
+        "id": 150,
+        "title": "Enterprise-wide zero administration paradigm",
+        "author": "Bailie Skittle",
+        "stageId": 9,
+        "progress": 98,
+        "dueDate": "9/1/2025",
+        "assignee": "Ryann Strongman",
+        "notes": "Decentralized mission-critical info-mediaries",
+        "proofingRounds": 1
+      },
+      {
+        "id": 151,
+        "title": "Face to face context-sensitive functionalities",
+        "author": "Bobbee Phittiplace",
+        "stageId": 10,
+        "progress": 65,
+        "dueDate": "4/17/2025",
+        "assignee": "Brnaby Guiso",
+        "notes": "Cloned modular hub",
+        "proofingRounds": 3
+      },
+      {
+        "id": 152,
+        "title": "Streamlined stable product",
+        "author": "Teresa Habbal",
+        "stageId": 6,
+        "progress": 35,
+        "dueDate": "8/17/2024",
+        "assignee": "Buffy Zanetti",
+        "notes": "Reactive didactic synergy",
+        "proofingRounds": 4
+      },
+      {
+        "id": 153,
+        "title": "Extended directional data-warehouse",
+        "author": "Baudoin Stenet",
+        "stageId": 6,
+        "progress": 79,
+        "dueDate": "1/2/2025",
+        "assignee": "Donella Maskill",
+        "notes": "Assimilated well-modulated throughput",
+        "proofingRounds": 5
+      },
+      {
+        "id": 154,
+        "title": "Visionary needs-based toolset",
+        "author": "Benedict Rossant",
+        "stageId": 7,
+        "progress": 42,
+        "dueDate": "2/16/2025",
+        "assignee": "Cookie Oen",
+        "notes": "Front-line motivating model",
+        "proofingRounds": 2
+      },
+      {
+        "id": 155,
+        "title": "Multi-channelled analyzing implementation",
+        "author": "Valerye Hucke",
+        "stageId": 8,
+        "progress": 51,
+        "dueDate": "5/20/2025",
+        "assignee": "Ag Hows",
+        "notes": "Persevering client-driven portal",
+        "proofingRounds": 1
+      },
+      {
+        "id": 156,
+        "title": "User-friendly maximized contingency",
+        "author": "Kale Trazzi",
+        "stageId": 4,
+        "progress": 2,
+        "dueDate": "10/25/2024",
+        "assignee": "Goddart Guyers",
+        "notes": "Proactive directional neural-net",
+        "proofingRounds": 3
+      },
+      {
+        "id": 157,
+        "title": "Ergonomic multimedia infrastructure",
+        "author": "Arvy McCutcheon",
+        "stageId": 1,
+        "progress": 39,
+        "dueDate": "9/17/2024",
+        "assignee": "Guinna McGibbon",
+        "notes": "Managed 6th generation open system",
+        "proofingRounds": 5
+      },
+      {
+        "id": 158,
+        "title": "Automated discrete benchmark",
+        "author": "Christi Ashley",
+        "stageId": 9,
+        "progress": 5,
+        "dueDate": "6/10/2025",
+        "assignee": "Adorne Wegener",
+        "notes": "Devolved bi-directional algorithm",
+        "proofingRounds": 5
+      },
+      {
+        "id": 159,
+        "title": "Managed multi-tasking policy",
+        "author": "Early Hardie",
+        "stageId": 5,
+        "progress": 88,
+        "dueDate": "12/4/2024",
+        "assignee": "Malynda Shoppee",
+        "notes": "Customer-focused clear-thinking hub",
+        "proofingRounds": 5
+      },
+      {
+        "id": 160,
+        "title": "Managed actuating monitoring",
+        "author": "Stanislaw Bannell",
+        "stageId": 5,
+        "progress": 31,
+        "dueDate": "10/14/2024",
+        "assignee": "Welch Leyshon",
+        "notes": "Multi-channelled homogeneous frame",
+        "proofingRounds": 4
+      },
+      {
+        "id": 161,
+        "title": "Ergonomic 6th generation standardization",
+        "author": "Gerhardt Goldhawk",
+        "stageId": 1,
+        "progress": 12,
+        "dueDate": "6/24/2025",
+        "assignee": "Akim Dollin",
+        "notes": "Public-key mobile knowledge user",
+        "proofingRounds": 2
+      },
+      {
+        "id": 162,
+        "title": "Customizable exuding concept",
+        "author": "Amara Novelli",
+        "stageId": 3,
+        "progress": 92,
+        "dueDate": "6/6/2025",
+        "assignee": "Poul Gallardo",
+        "notes": "Enhanced content-based paradigm",
+        "proofingRounds": 5
+      },
+      {
+        "id": 163,
+        "title": "Assimilated mobile firmware",
+        "author": "Johna Cino",
+        "stageId": 10,
+        "progress": 99,
+        "dueDate": "3/13/2025",
+        "assignee": "Rudyard Gecks",
+        "notes": "Reverse-engineered reciprocal approach",
+        "proofingRounds": 5
+      },
+      {
+        "id": 164,
+        "title": "Compatible well-modulated Graphical User Interface",
+        "author": "Salomi McVie",
+        "stageId": 5,
+        "progress": 69,
+        "dueDate": "4/9/2025",
+        "assignee": "Marketa Bernardos",
+        "notes": "Implemented 24 hour matrix",
+        "proofingRounds": 3
+      },
+      {
+        "id": 165,
+        "title": "Organized systemic matrix",
+        "author": "Giacomo Hilley",
+        "stageId": 3,
+        "progress": 33,
+        "dueDate": "8/16/2024",
+        "assignee": "Phillip Kienlein",
+        "notes": "Cross-platform discrete protocol",
+        "proofingRounds": 4
+      },
+      {
+        "id": 166,
+        "title": "Assimilated optimizing implementation",
+        "author": "Renie Goad",
+        "stageId": 10,
+        "progress": 54,
+        "dueDate": "4/13/2025",
+        "assignee": "Clemente Provest",
+        "notes": "Open-source motivating website",
+        "proofingRounds": 1
+      },
+      {
+        "id": 167,
+        "title": "Reduced scalable forecast",
+        "author": "Sadella Gannon",
+        "stageId": 11,
+        "progress": 17,
+        "dueDate": "9/27/2025",
+        "assignee": "Mellicent Kinzett",
+        "notes": "Ameliorated fault-tolerant utilisation",
+        "proofingRounds": 2
+      },
+      {
+        "id": 168,
+        "title": "Robust web-enabled knowledge base",
+        "author": "Enriqueta Casham",
+        "stageId": 12,
+        "progress": 37,
+        "dueDate": "3/11/2025",
+        "assignee": "Pincas Lomax",
+        "notes": "Multi-channelled mobile pricing structure",
+        "proofingRounds": 5
+      },
+      {
+        "id": 169,
+        "title": "Realigned homogeneous focus group",
+        "author": "Cahra Cleaves",
+        "stageId": 1,
+        "progress": 98,
+        "dueDate": "3/15/2025",
+        "assignee": "Krissy Nott",
+        "notes": "Multi-lateral stable forecast",
+        "proofingRounds": 2
+      },
+      {
+        "id": 170,
+        "title": "Self-enabling 24 hour toolset",
+        "author": "Lynnea Mee",
+        "stageId": 8,
+        "progress": 41,
+        "dueDate": "6/21/2025",
+        "assignee": "Kristina Aldham",
+        "notes": "Adaptive transitional Graphical User Interface",
+        "proofingRounds": 2
+      },
+      {
+        "id": 171,
+        "title": "Function-based mobile core",
+        "author": "Farand Deville",
+        "stageId": 10,
+        "progress": 9,
+        "dueDate": "2/19/2025",
+        "assignee": "Erasmus Locket",
+        "notes": "Multi-channelled radical forecast",
+        "proofingRounds": 4
+      },
+      {
+        "id": 172,
+        "title": "Team-oriented modular instruction set",
+        "author": "Tracey Basill",
+        "stageId": 7,
+        "progress": 80,
+        "dueDate": "9/23/2025",
+        "assignee": "Davon Carratt",
+        "notes": "Stand-alone non-volatile collaboration",
+        "proofingRounds": 2
+      },
+      {
+        "id": 173,
+        "title": "Integrated content-based hub",
+        "author": "Maureene McPeeters",
+        "stageId": 3,
+        "progress": 45,
+        "dueDate": "1/11/2025",
+        "assignee": "Amata Flohard",
+        "notes": "Exclusive asynchronous ability",
+        "proofingRounds": 5
+      },
+      {
+        "id": 174,
+        "title": "Centralized 4th generation structure",
+        "author": "Bram Beadnall",
+        "stageId": 9,
+        "progress": 51,
+        "dueDate": "9/21/2024",
+        "assignee": "Amabel Palfreeman",
+        "notes": "Digitized client-driven task-force",
+        "proofingRounds": 1
+      },
+      {
+        "id": 175,
+        "title": "Fully-configurable upward-trending strategy",
+        "author": "Marlon Blazej",
+        "stageId": 12,
+        "progress": 35,
+        "dueDate": "1/27/2025",
+        "assignee": "Irv O'Calleran",
+        "notes": "Quality-focused client-server flexibility",
+        "proofingRounds": 1
+      },
+      {
+        "id": 176,
+        "title": "Virtual asynchronous emulation",
+        "author": "Hamish Epple",
+        "stageId": 10,
+        "progress": 8,
+        "dueDate": "12/20/2024",
+        "assignee": "Christian Moxted",
+        "notes": "Organic maximized internet solution",
+        "proofingRounds": 3
+      },
+      {
+        "id": 177,
+        "title": "Exclusive upward-trending hub",
+        "author": "Devonne Waren",
+        "stageId": 3,
+        "progress": 14,
+        "dueDate": "12/21/2024",
+        "assignee": "Welsh Szymonwicz",
+        "notes": "Innovative didactic help-desk",
+        "proofingRounds": 2
+      },
+      {
+        "id": 178,
+        "title": "Profound regional pricing structure",
+        "author": "Farra Mitchley",
+        "stageId": 10,
+        "progress": 38,
+        "dueDate": "4/16/2025",
+        "assignee": "Rudiger Balsdon",
+        "notes": "Vision-oriented hybrid portal",
+        "proofingRounds": 5
+      },
+      {
+        "id": 179,
+        "title": "Organic high-level capacity",
+        "author": "Maisey Losseljong",
+        "stageId": 2,
+        "progress": 68,
+        "dueDate": "10/7/2024",
+        "assignee": "Holt Brasseur",
+        "notes": "Team-oriented exuding forecast",
+        "proofingRounds": 5
+      },
+      {
+        "id": 180,
+        "title": "Streamlined 5th generation encryption",
+        "author": "Galvan Battams",
+        "stageId": 12,
+        "progress": 7,
+        "dueDate": "6/21/2025",
+        "assignee": "Stanleigh Jirzik",
+        "notes": "Business-focused heuristic system engine",
+        "proofingRounds": 4
+      },
+      {
+        "id": 181,
+        "title": "Self-enabling upward-trending encoding",
+        "author": "Kristy Flagg",
+        "stageId": 5,
+        "progress": 60,
+        "dueDate": "9/3/2024",
+        "assignee": "Valentine Goddard",
+        "notes": "De-engineered multi-tasking knowledge user",
+        "proofingRounds": 3
+      },
+      {
+        "id": 182,
+        "title": "Enhanced radical adapter",
+        "author": "Allx Strasse",
+        "stageId": 6,
+        "progress": 82,
+        "dueDate": "3/5/2025",
+        "assignee": "Gavin Biggerstaff",
+        "notes": "Down-sized bottom-line firmware",
+        "proofingRounds": 2
+      },
+      {
+        "id": 183,
+        "title": "Programmable holistic encryption",
+        "author": "Shane Lednor",
+        "stageId": 7,
+        "progress": 67,
+        "dueDate": "9/9/2025",
+        "assignee": "Tobe Blackmuir",
+        "notes": "Secured executive algorithm",
+        "proofingRounds": 4
+      },
+      {
+        "id": 184,
+        "title": "Visionary high-level internet solution",
+        "author": "Annamaria Klosser",
+        "stageId": 6,
+        "progress": 88,
+        "dueDate": "6/15/2025",
+        "assignee": "Frieda Inkster",
+        "notes": "Persevering methodical budgetary management",
+        "proofingRounds": 2
+      },
+      {
+        "id": 185,
+        "title": "Intuitive neutral synergy",
+        "author": "Peria Sylett",
+        "stageId": 6,
+        "progress": 69,
+        "dueDate": "7/25/2025",
+        "assignee": "Xena Tregust",
+        "notes": "Operative scalable superstructure",
+        "proofingRounds": 1
+      },
+      {
+        "id": 186,
+        "title": "Monitored system-worthy collaboration",
+        "author": "Marris Godby",
+        "stageId": 3,
+        "progress": 8,
+        "dueDate": "6/29/2025",
+        "assignee": "Riley Faldo",
+        "notes": "Cloned intermediate contingency",
+        "proofingRounds": 4
+      },
+      {
+        "id": 187,
+        "title": "Open-architected foreground solution",
+        "author": "Spense Dunston",
+        "stageId": 2,
+        "progress": 89,
+        "dueDate": "9/15/2024",
+        "assignee": "Waly Feacham",
+        "notes": "Digitized eco-centric matrix",
+        "proofingRounds": 2
+      },
+      {
+        "id": 188,
+        "title": "Cross-platform user-facing flexibility",
+        "author": "Drugi Jacobovitz",
+        "stageId": 10,
+        "progress": 37,
+        "dueDate": "9/28/2024",
+        "assignee": "Zeb Raveau",
+        "notes": "Function-based 5th generation functionalities",
+        "proofingRounds": 1
+      },
+      {
+        "id": 189,
+        "title": "Profit-focused didactic pricing structure",
+        "author": "Arielle Garett",
+        "stageId": 5,
+        "progress": 7,
+        "dueDate": "1/17/2025",
+        "assignee": "Aylmar Vazquez",
+        "notes": "Progressive leading edge strategy",
+        "proofingRounds": 2
+      },
+      {
+        "id": 190,
+        "title": "Proactive mission-critical framework",
+        "author": "Andros Livezley",
+        "stageId": 7,
+        "progress": 89,
+        "dueDate": "8/10/2025",
+        "assignee": "Panchito Prowse",
+        "notes": "Open-source motivating paradigm",
+        "proofingRounds": 5
+      },
+      {
+        "id": 191,
+        "title": "Team-oriented mission-critical parallelism",
+        "author": "Nettle Phippen",
+        "stageId": 5,
+        "progress": 2,
+        "dueDate": "3/6/2025",
+        "assignee": "Gabriellia Niese",
+        "notes": "Ameliorated demand-driven artificial intelligence",
+        "proofingRounds": 1
+      },
+      {
+        "id": 192,
+        "title": "Decentralized real-time framework",
+        "author": "Alanson Smead",
+        "stageId": 4,
+        "progress": 51,
+        "dueDate": "10/30/2024",
+        "assignee": "Amargo Leacy",
+        "notes": "Expanded explicit budgetary management",
+        "proofingRounds": 2
+      },
+      {
+        "id": 193,
+        "title": "Devolved impactful moratorium",
+        "author": "Grier Luckcock",
+        "stageId": 12,
+        "progress": 30,
+        "dueDate": "9/28/2024",
+        "assignee": "Windy Stopp",
+        "notes": "Re-engineered foreground middleware",
+        "proofingRounds": 1
+      },
+      {
+        "id": 194,
+        "title": "Ameliorated logistical orchestration",
+        "author": "Benita Cockshut",
+        "stageId": 6,
+        "progress": 94,
+        "dueDate": "3/26/2025",
+        "assignee": "Nydia Perritt",
+        "notes": "Implemented radical application",
+        "proofingRounds": 2
+      },
+      {
+        "id": 195,
+        "title": "Team-oriented methodical internet solution",
+        "author": "Leonardo Cawtheray",
+        "stageId": 11,
+        "progress": 27,
+        "dueDate": "8/14/2025",
+        "assignee": "Kimberley Rosentholer",
+        "notes": "Quality-focused high-level circuit",
+        "proofingRounds": 1
+      },
+      {
+        "id": 196,
+        "title": "Enterprise-wide even-keeled migration",
+        "author": "Camellia Redley",
+        "stageId": 10,
+        "progress": 57,
+        "dueDate": "3/15/2025",
+        "assignee": "Patricia Fills",
+        "notes": "Focused foreground methodology",
+        "proofingRounds": 4
+      },
+      {
+        "id": 197,
+        "title": "Configurable zero administration policy",
+        "author": "Harley Dunphie",
+        "stageId": 8,
+        "progress": 93,
+        "dueDate": "12/15/2024",
+        "assignee": "Silvester Cadwallader",
+        "notes": "Visionary 24/7 protocol",
+        "proofingRounds": 3
+      },
+      {
+        "id": 198,
+        "title": "Quality-focused contextually-based contingency",
+        "author": "Emiline Trinkwon",
+        "stageId": 12,
+        "progress": 89,
+        "dueDate": "11/22/2024",
+        "assignee": "Pandora Fitzmaurice",
+        "notes": "Reduced hybrid local area network",
+        "proofingRounds": 2
+      },
+      {
+        "id": 199,
+        "title": "Customer-focused upward-trending flexibility",
+        "author": "Nicola Scarisbrick",
+        "stageId": 5,
+        "progress": 15,
+        "dueDate": "9/4/2025",
+        "assignee": "Rosaleen Anthona",
+        "notes": "Devolved modular interface",
+        "proofingRounds": 1
+      },
+      {
+        "id": 200,
+        "title": "Multi-layered real-time local area network",
+        "author": "Gardner Weaving",
+        "stageId": 1,
+        "progress": 9,
+        "dueDate": "4/3/2025",
+        "assignee": "Birgit Fritchley",
+        "notes": "Profit-focused holistic instruction set",
+        "proofingRounds": 4
+      }
+    ];
+
+    const stages = {
+      1: "Technical Editing",
+      2: "Technical Editing QA",
+      3: "Copyediting",
+      4: "Copyediting QA",
+      5: "First Proof",
+      6: "Author Proof Assigned",
+      7: "Author Proof In Progress",
+      8: "Author Proof Completed",
+      9: "PM Review",
+      10: "PM Approval Completed",
+      11: "Final QA",
+      12: "Despatched"
+    };
+
+    const ManuscriptDetails = ({ manuscript, handleMoveToNextStage }) => {
+      const [notificationLoader, setNotificationLoader] = useState(false);
+      const [notificationMessage, setNotificationMessage] = useState("Send Notification");
+
+      const handleNotificationMessage = (message) => {
+        setNotificationMessage(message);
+        setTimeout(() => {
+          setNotificationMessage("Send Notification");
+        }, 2000);
+      }
+      const handleNotification = (manuscriptId) => {
+        setNotificationLoader(true);
+        setTimeout(() => {
+          setNotificationLoader(false);
+          handleNotificationMessage("Notification sent!");
+        }, 2000);
+      };
+
+      return (
+        <div className="m-4 p-4 bg-blue-50 rounded shadow-lg" key={manuscript.id}>
+          <h2 className="text-xl font-bold mb-4">{manuscript.title}</h2>
+          <p><strong>Author:</strong> {manuscript.author}</p>
+          <p><strong>Progress:</strong> {manuscript.progress}%</p>
+          <p><strong>Due Date:</strong> {manuscript.dueDate}</p>
+          <p><strong>Assignee:</strong> {manuscript.assignee}</p>
+          <p><strong>Notes:</strong> {manuscript.notes}</p>
+          {manuscript.proofingRounds > 0 && (
+            <p><strong>Proofing Rounds:</strong> {manuscript.proofingRounds}</p>
+          )}
+          <div className="mt-4">
+            <h3 className="font-semibold">Tasks</h3>
+            <ul className="list-disc pl-5">
+              <li>Review metadata</li>
+              <li>Validate formatting</li>
+              <li>Assign editor</li>
+            </ul>
+          </div>
+          <div className="mt-4 flex text-sm justify-between">
+            {(manuscript.stageId !== Object.keys(stages).length) && <button className="bg-primary text-white px-4 py-2 rounded mr-2" onClick={() => handleMoveToNextStage(manuscript.id)}>Move to Next Stage</button>}
+            <button className="bg-gray-500 text-white px-4 py-2 rounded w-[150px]" onClick={() => handleNotification(manuscript.id)}>
+              {notificationLoader ? <div className="w-5 h-5  border-4 border-white border-t-transparent rounded-full animate-spin m-auto"></div> : notificationMessage}
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    // Sidebar Component for Manuscript Details
+    const StageLevelManuscripts = ({ manuscriptStageID, manuscripts: currentManuscripts, onClose, handleMoveToNextStage }) => {
+      const manuscripts = currentManuscripts.filter(ms => ms.stageId === manuscriptStageID);
+
+      if (manuscripts.length === 0) return null;
+
+      return (
+        <div className="fixed right-0 top-0 h-full w-[27rem] bg-white shadow-xl">
+          <div className="sticky top-0 bg-blue-200 flex align-middle justify-between pr-4 font-bold">
+            <h1 className="text-2xl p-4">{stages[manuscriptStageID]}</h1>
+            <button onClick={onClose} className="text-gray-600">X</button>
+          </div>
+          <div className="p-4 h-[calc(100vh-4rem)] overflow-y-auto">
+            {manuscripts.map(manuscript => (
+              <ManuscriptDetails manuscript={manuscript} handleMoveToNextStage={handleMoveToNextStage} />
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    // Analytics Component
+    const Analytics = ({ manuscripts }) => {
+      const proofingMetrics = manuscripts.reduce((acc, ms) => {
+        if (ms.stageId === 6 || ms.stageId === 7) {
+          acc.totalProofingManuscripts += 1;
+          acc.totalRounds += ms.proofingRounds;
+        }
+        return acc;
+      }, { totalProofingManuscripts: 0, totalRounds: 0 });
+
+      return (
+        <div className="p-6 bg-gray-50">
+          <h2 className="text-xl font-bold mb-4">Analytics & Insights</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-secondary rounded shadow">
+              <h3 className="font-semibold">Throughput</h3>
+              <p>Manuscripts processed: 15 this week</p>
+            </div>
+            <div className="p-4 bg-red-100 rounded shadow">
+              <h3 className="font-semibold">Bottlenecks</h3>
+              <p>Copyediting: 3 manuscripts delayed</p>
+            </div>
+            <div className="p-4 bg-secondary rounded shadow">
+              <h3 className="font-semibold">Team Performance</h3>
+              <p>Average tasks per editor: 5/day</p>
+            </div>
+            <div className="p-4 bg-secondary rounded shadow">
+              <h3 className="font-semibold">Quality Metrics</h3>
+              <p>Error rate: 2% this month</p>
+            </div>
+            <div className="p-4 bg-secondary rounded shadow">
+              <h3 className="font-semibold">Proofing Metrics</h3>
+              <p>Total manuscripts in proofing: {proofingMetrics.totalProofingManuscripts}</p>
+              <p>Average proofing rounds: {proofingMetrics.totalProofingManuscripts > 0 ? (proofingMetrics.totalRounds / proofingMetrics.totalProofingManuscripts).toFixed(1) : 0}</p>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // Main Dashboard Component
+    const Dashboard = () => {
+      const [manuscripts, setManuscripts] = useState(initialManuscripts);
+      const [selectedStage, setSelectedStage] = useState(null);
+
+      const handleMoveToNextStage = (id) => {
+        setManuscripts(prev => prev.map(ms => ms.id === id ? { ...ms, stageId: ms.stageId + 1 } : ms));
+      }
+
+      // Calculate manuscript count per stage
+      const stageCounts = Object.keys(stages).reduce((acc, stage) => {
+        acc[stage] = manuscripts.filter(ms => ms.stageId === parseInt(stage)).length;
+        return acc;
+      }, {});
+
+      return (
+        <div className="min-h-screen bg-gray-100 text-gray-800">
+          {/* Header */}
+          <header className="bg-primary shadow p-4 flex justify-between items-center text-white">
+            <div className="flex items-center">
+              <h1 className="text-2xl font-bold px-2">Nvcleus</h1>
+            </div>
+          </header>
+
+          {/* Workflow Board */}
+          <div className="p-6">
+            <h2 className="text-xl font-bold mb-4">Workflow Board</h2>
+            <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+              {Object.keys(stages).map(stageKey => (
+                <div key={stageKey} className={`w-80 rounded-lg shadow p-4 transform transition-all duration-200 ${stageCounts[parseInt(stageKey)] > 0 ? 'bg-primary cursor-pointer text-white' : 'bg-blue-100'} hover:shadow-xl hover:scale-105`} onClick={() => {
+                  setSelectedStage(stageKey)
+                }}>
+                  <h3 className="text-lg font-semibold mb-2 ">{stages[stageKey]}</h3>
+                  <p className="text-sm mb-2">Manuscripts: {stageCounts[parseInt(stageKey)] || 0}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Analytics Section */}
+          <Analytics manuscripts={manuscripts} />
+
+          {/* Manuscript Details Sidebar */}
+          {
+            selectedStage && (
+              <StageLevelManuscripts
+                manuscriptStageID={parseInt(selectedStage)}
+                manuscripts={manuscripts}
+                onClose={() => setSelectedStage(null)}
+                handleMoveToNextStage={(id) => handleMoveToNextStage(id)}
+              />
+            )
+          }
+        </div >
+      );
+    };
+
+    // Render the app
+    ReactDOM.render(<Dashboard />, document.getElementById('root'));
+  </script>
+</body>
+
+</html>
