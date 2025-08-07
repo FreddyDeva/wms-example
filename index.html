@@ -50,19 +50,30 @@
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
+    const params = new URLSearchParams(window.location.search);
+    const primaryRGB = params.get("bg"); // e.g., "rgb(70,62,194)"
+    console.log(primaryRGB);
+
+    if (primaryRGB) {
+      document.documentElement.style.setProperty('--color-primary', primaryRGB);
+    }
+  </script>
+  <style>
+    :root {
+      --color-primary: rgb(70, 62, 194);
+      /* default rgb */
+    }
+  </style>
+  <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            primary: '#463EC2',
+            primary: 'var(--color-primary)',
             secondary: '#cbf5dd',
             dashboardBg: '#F9FAFB',
             stageCard: '#E0F2FE'
           },
-          // fontFamily: {
-          //   heading: ['Poppins', 'sans-serif'],
-          //   body: ['Inter', 'sans-serif']
-          // }
         }
       }
     }
